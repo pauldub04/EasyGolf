@@ -13,6 +13,11 @@ int main(void) {
     SetConfigFlags(FLAG_MSAA_4X_HINT);
     InitWindow(screenWidth, screenHeight, "raylib [shapes] example - bouncing ball");
 
+    SetTargetFPS(FPS);
+    // 60fps  -> 1
+    // 120fps -> 0.5
+    // so that fps does not change ball movement
+
     Ball ball = {
         .radius = 15,
         .position = { GetScreenWidth()/2.0f, GetScreenHeight()/2.0f},
@@ -25,11 +30,6 @@ int main(void) {
     Vector2 startMousePosition = Vector2Zero();
     Vector2 mouseMove = Vector2Zero();
     bool mouseWasPressed = 0;
-
-    SetTargetFPS(FPS);
-    // 60fps  -> 1
-    // 120fps -> 0.5
-    // so that fps does not change ball movement
 
     while (!WindowShouldClose()) {
         if (IsKeyPressed(KEY_SPACE)) {
@@ -103,6 +103,31 @@ int main(void) {
                     DrawCircleV(dotPos, startDotRadius-i/2.0, (Color){0, 0, 0, 50});
                 }
             }
+            
+            // play --------
+            Ball other = {
+                .radius = 50,
+                .position = (Vector2) {100, 100},
+                .velocity = Vector2Zero(),
+                .color = BLUE
+            };
+            BallDraw(&other);
+            if (CheckCollisionCircles(ball.position, ball.radius, other.position, other.radius)) {
+                BallResolveCollisionCircle(&ball, other.position, other.radius);
+            }
+
+            Rectangle rect = {
+                .x = 200,
+                .y = 200,
+                .width = 100,
+                .height = 300
+            };
+            DrawRectangleRec(rect, BLUE);
+            if (CheckCollisionCircleRec(ball.position, ball.radius, rect)) {
+                BallResolveCollisionRect(&ball, &rect);
+            }
+
+            // ---------
 
             BallDraw(&ball);
 
