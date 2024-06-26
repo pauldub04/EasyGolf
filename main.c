@@ -1,17 +1,13 @@
 #include "raylib.h"
 #include "raymath.h"
 #include "ball.h"
-#include "physics.h"
+#include "shape.h"
+#include "constants.h"
 
-#define FPS 60
-#define MAX_LAUNCH_VELOCITY 50
-
-static const int screenWidth = 1280;
-static const int screenHeight = 720;
 
 int main(void) {
     SetConfigFlags(FLAG_MSAA_4X_HINT);
-    InitWindow(screenWidth, screenHeight, "raylib [shapes] example - bouncing ball");
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "EasyGolf");
 
     SetTargetFPS(FPS);
     // 60fps  -> 1
@@ -19,11 +15,19 @@ int main(void) {
     // so that fps does not change ball movement
 
     Ball ball = {
-        .radius = 15,
+        // .radius = 15,
+        .radius = 35,
         .position = { GetScreenWidth()/2.0f, GetScreenHeight()/2.0f},
         .velocity = Vector2Zero(),
         .color = WHITE
     };
+
+    Shape* shapes[] = {
+        ShapeCreateRectangle(200, 200, 100, 300),
+        ShapeCreateCircle(100, 100, 50)
+    };
+    int shapesLen = 2;
+
 
     bool pause = 0;
 
@@ -47,13 +51,13 @@ int main(void) {
                     float mouseMoveLength = Vector2Length(mouseMove);
 
                     if (!FloatEquals(mouseMoveLength, 0.0f)) {
-                        // screenWidth = MAX_LAUNCH_VELOCITY
+                        // SCREEN_WIDTH = MAX_LAUNCH_VELOCITY
                         // mouseMoveLength   = newLength
 
                         // mouseMove: 0 - diag
                         // velocity:  0 - MAX_LAUNCH_VELOCITY
                         // TODO: maybe use Remap()
-                        float newLength = MAX_LAUNCH_VELOCITY * mouseMoveLength / screenWidth;
+                        float newLength = MAX_LAUNCH_VELOCITY * mouseMoveLength / SCREEN_WIDTH;
                         mouseMove = Vector2Scale(mouseMove, newLength / mouseMoveLength);
                         // printVector2("mouseMove", mouseMove);
                     }
@@ -66,8 +70,9 @@ int main(void) {
             }
 
             float deltaTime = 60.0f/GetFPS();
-            BallMove(&ball, deltaTime);
+            BallMove(&ball, shapes, shapesLen, deltaTime);
         }
+
 
         BeginDrawing();
             ClearBackground(DARKGREEN);
@@ -75,7 +80,11 @@ int main(void) {
             if (pause) {
                 DrawText("PAUSED", GetScreenWidth()/2-100, GetScreenHeight()/2-50, 30, WHITE);
             }
-            
+
+            for (int i = 0; i < shapesLen; ++i) {
+                ShapeDraw(shapes[i], BLUE, &ball);
+            }
+
             if (mouseWasPressed) {
                 // Vector2 endPos = Vector2Add(ball.position, Vector2Scale(mouseMove, 5));
                 // DrawLineEx(ball.position, endPos, 5, YELLOW);
@@ -103,32 +112,6 @@ int main(void) {
                     DrawCircleV(dotPos, startDotRadius-i/2.0, (Color){0, 0, 0, 50});
                 }
             }
-            
-            // play --------
-            Ball other = {
-                .radius = 50,
-                .position = (Vector2) {100, 100},
-                .velocity = Vector2Zero(),
-                .color = BLUE
-            };
-            BallDraw(&other);
-            if (CheckCollisionCircles(ball.position, ball.radius, other.position, other.radius)) {
-                BallResolveCollisionCircle(&ball, other.position, other.radius);
-            }
-
-            Rectangle rect = {
-                .x = 200,
-                .y = 200,
-                .width = 100,
-                .height = 300
-            };
-            DrawRectangleRec(rect, BLUE);
-            if (CheckCollisionCircleRec(ball.position, ball.radius, rect)) {
-                BallResolveCollisionRect(&ball, &rect);
-            }
-
-            // ---------
-
             BallDraw(&ball);
 
             DrawFPS(10, 10);
