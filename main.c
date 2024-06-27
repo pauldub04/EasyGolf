@@ -41,7 +41,7 @@ int main(void) {
         }
 
         if (!pause) {
-            if (!IsBallMoving(&ball)) {
+            if (!BallIsMoving(&ball)) {
                 if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                     startMousePosition = GetMousePosition();
                     mouseWasPressed = 1;
@@ -81,6 +81,7 @@ int main(void) {
                 DrawText("PAUSED", GetScreenWidth()/2-100, GetScreenHeight()/2-50, 30, WHITE);
             }
 
+            BallDraw(&ball);
             for (int i = 0; i < shapesLen; ++i) {
                 ShapeDraw(shapes[i], BLUE, &ball);
             }
@@ -112,7 +113,6 @@ int main(void) {
                     DrawCircleV(dotPos, startDotRadius-i/2.0, (Color){0, 0, 0, 50});
                 }
             }
-            BallDraw(&ball);
 
             DrawFPS(10, 10);
         EndDrawing();

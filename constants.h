@@ -6,13 +6,14 @@
         printf(vector_name " = {%f, %f}, len=%f\n", vec.x, vec.y, Vector2Length(vec));
 
 // global
+#define DEBUG 1
+
 #define SCREEN_WIDTH 1280
 #define SCREEN_HEIGHT 720
 #define FPS 60
 
-#define DEBUG 1
-
 // game
 #define MAX_LAUNCH_VELOCITY 50
+#define MAX_SHAPES 1000
 
 #endif

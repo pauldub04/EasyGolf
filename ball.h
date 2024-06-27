@@ -24,8 +24,8 @@ typedef struct Ball {
 bool BallIsMoving(Ball* ball);
 
 // ballRadius is excplicitly for collision with rect
-void BallResolveCollisionCircle(Ball* ball, int ballRadius, Circle circle);
-void BallResolveCollisionRect(Ball* ball, Vector2 oldPosition, Rectangle* rect);
+Ball BallResolveCollisionCircle(Ball* ball, int ballRadius, Circle circle);
+Ball BallResolveCollisionRectangle(Ball* ball, Vector2 oldPosition, Rectangle rectangle);
 
 float sign(float x);
 float Vector2CrossProduct(Vector2 a, Vector2 b);
