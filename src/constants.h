@@ -6,7 +6,7 @@
         printf(vector_name " = {%f, %f}, len=%f\n", vec.x, vec.y, Vector2Length(vec));
 
 // global
-#define DEBUG 1
+#define DEBUG 0
 
 #define SCREEN_WIDTH 1280
 #define SCREEN_HEIGHT 720

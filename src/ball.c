@@ -1,60 +1,67 @@
 #include "ball.h"
+#include "constants.h"
+#include "math.h"
+#include "physics.h"
+#include <raylib.h>
+#include <raymath.h>
+#include <stdio.h>
 
 bool BallIsMoving(Ball* ball) {
     return Vector2Length(ball->velocity) > 0.00001f;
 }
 
-Ball BallResolveCollisionCircle(Ball* ball, int ballRadius, Circle circle) {
+Ball BallResolveCollisionCircle(Ball* ball, Vector2 oldPosition, int ballRadius, Circle circle, float deltaTime) {
     Ball newBall = *ball;
-    if (!CheckCollisionCircles(newBall.position, newBall.radius, ShapeGetPositionCircle(circle), circle.radius)) {
+
+    float vx = newBall.velocity.x, vy = newBall.velocity.y;
+    float x0 = oldPosition.x, y0 = oldPosition.y;
+    float x2 = circle.x, y2 = circle.y;
+    float R = circle.radius, r = ballRadius;
+
+    // x(t) = x0 + vx*t
+    // y(t) = y0 + vy*t
+
+    // want find t1 : x(t1) = x1, y(t1) = y1
+    // (x1-x2)^2 + (y1-y2)^2 = (R+r)^2
+    // (x0 + vx*t - x2)^2 + (y0 + vy*t - y2)^2 = (R+r)^2
+    // (x0-x2)^2 + 2vx*t(x0-x2) + vx^2*t^2 + (y0-y2)^2 + 2vy*t(y0-y2) + vy^2*t^2 = (R+r)^2
+    // t^2*(vx^2 + vy^2) + t*2*(vx*(x0-x2) + vy*(y0-y2)) + (x0-x2)^2 + (y0-y2)^2 - (R+r)^2 = 0
+    //     ------a------     --------------b------------   -----------------c-------------
+
+    float a = vx*vx + vy*vy;
+    float b = 2*(vx*(x0-x2) + vy*(y0-y2));
+    float c = (x0-x2)*(x0-x2) + (y0-y2)*(y0-y2) - (R+r)*(R+r);
+
+    float roots[2];
+    int rootsCount = QuadraticEquation(a, b, c, roots);
+    
+    // no roots -> moving away
+    // 1 root -> tangent to a circle, ball goes straight
+    // 2 roots and 1st negative -> moving away + let ball go if its inside circle
+    if (rootsCount <= 1 || roots[0] < 0) {
         return newBall;
     }
 
-    Vector2 delta = Vector2Subtract(ball->position, ShapeGetPositionCircle(circle));
-    float oldLength = Vector2Length(delta);
+    float t = roots[0];
 
-    Vector2 mtd = Vector2Scale(delta, (ballRadius + circle.radius - oldLength) / oldLength);
-
-    newBall.position = Vector2Add(newBall.position, mtd);
-    newBall.velocity = Vector2Reflect(newBall.velocity, Vector2Normalize(mtd));
-    newBall.velocity = Vector2Scale(newBall.velocity, bounce);
-    return newBall;
-}
-
-float sign(float x) {
-    if (FloatEquals(x, 0.0f)) {
-        return 0;
-    } else if (x > 0) {
-        return 1;
-    } else {
-        return -1;
+    // not in this frame
+    if (t >= deltaTime) {
+        return newBall;
     }
-}
 
-float Vector2CrossProduct(Vector2 a, Vector2 b) {
-    return a.x*b.y - a.y*b.x;
-}
+    newBall.position = ApplyVelocity(oldPosition, newBall.velocity, t);
 
-bool onSeg(Vector2 p, Vector2 a, Vector2 b) {
-    return FloatEquals(Vector2CrossProduct(Vector2Subtract(a, b), Vector2Subtract(p, b)), 0.0f) &&
-            Vector2DotProduct(Vector2Subtract(p, a), Vector2Subtract(p, b)) <= 0;
-}
- 
-bool checkSides(Vector2 a, Vector2 b, Vector2 c, Vector2 d) {
-    return sign(Vector2CrossProduct(Vector2Subtract(a, b), Vector2Subtract(d, b))) *
-            sign(Vector2CrossProduct(Vector2Subtract(a, b), Vector2Subtract(c, b))) < 0 &&
-            sign(Vector2CrossProduct(Vector2Subtract(c, d), Vector2Subtract(a, d))) *
-            sign(Vector2CrossProduct(Vector2Subtract(c, d), Vector2Subtract(b, d))) < 0;
-}
- 
-bool isIntersect(Vector2 a, Vector2 b, Vector2 c, Vector2 d) {
-    return checkSides(a,b,c,d) || onSeg(a,c,d) || onSeg(b,c,d) ||
-            onSeg(c,a,b) || onSeg(d,a,b);
+    Vector2 delta = Vector2Subtract(ShapeGetPositionCircle(circle), newBall.position);
+    newBall.velocity = Vector2Reflect(newBall.velocity, Vector2Normalize(delta));
+    newBall.velocity = Vector2Scale(newBall.velocity, bounce);
+    
+    // maybe make next frame deltaTime-t, not deltaTime;
+    return newBall;
 }
 
 Ball BallResolveCollisionHorizontalSegment(Ball *ball, Vector2 oldPosition, Vector2 left, Vector2 right) {
     Ball newBall = *ball;
-    if (isIntersect(oldPosition, newBall.position, left, right)) {
+    if (CheckSegmentsIntersect(oldPosition, newBall.position, left, right)) {
         newBall.position.y = left.y;
         newBall.velocity.y *= -bounce;
     }
@@ -63,14 +70,14 @@ Ball BallResolveCollisionHorizontalSegment(Ball *ball, Vector2 oldPosition, Vect
 
 Ball BallResolveCollisionVerticalSegment(Ball *ball, Vector2 oldPosition, Vector2 top, Vector2 bottom) {
     Ball newBall = *ball;
-    if (isIntersect(oldPosition, newBall.position, top, bottom)) {
+    if (CheckSegmentsIntersect(oldPosition, newBall.position, top, bottom)) {
         newBall.position.x = top.x;
         newBall.velocity.x *= -bounce;
     }
     return newBall;
 }
 
-Ball BallResolveCollisionRectangle(Ball* ball, Vector2 oldPosition, Rectangle rectangle) {
+Ball BallResolveCollisionRectangle(Ball* ball, Vector2 oldPosition, Rectangle rectangle, float deltaTime) {
     Ball newBall = *ball;
     if (!CheckCollisionCircleRec(ball->position, ball->radius, rectangle)) {
         return newBall;
@@ -101,16 +108,16 @@ Ball BallResolveCollisionRectangle(Ball* ball, Vector2 oldPosition, Rectangle re
     Circle rbCircle = {rectangle.x+rectangle.width, rectangle.y+rectangle.height, newBall.radius};
 
     if (CheckCollisionCircles(newBall.position, 0, ShapeGetPositionCircle(ltCircle), newBall.radius)) {
-        newBalls[nextFree++] = BallResolveCollisionCircle(ball, 0, ltCircle);
+        newBalls[nextFree++] = BallResolveCollisionCircle(ball, oldPosition, 0, ltCircle, deltaTime);
     }
     if (CheckCollisionCircles(newBall.position, 0, ShapeGetPositionCircle(rtCircle), newBall.radius)) {
-        newBalls[nextFree++] = BallResolveCollisionCircle(ball, 0, rtCircle);
+        newBalls[nextFree++] = BallResolveCollisionCircle(ball, oldPosition, 0, rtCircle, deltaTime);
     }
     if (CheckCollisionCircles(newBall.position, 0, ShapeGetPositionCircle(lbCircle), newBall.radius)) {
-        newBalls[nextFree++] = BallResolveCollisionCircle(ball, 0, lbCircle);
+        newBalls[nextFree++] = BallResolveCollisionCircle(ball, oldPosition, 0, lbCircle, deltaTime);
     }
     if (CheckCollisionCircles(newBall.position, 0, ShapeGetPositionCircle(rbCircle), newBall.radius)) {
-        newBalls[nextFree++] = BallResolveCollisionCircle(ball, 0, rbCircle);
+        newBalls[nextFree++] = BallResolveCollisionCircle(ball, oldPosition, 0, rbCircle, deltaTime);
     }
 
     int minIdx = -1;
@@ -150,8 +157,7 @@ void BallMove(Ball* ball, Shape* shapes[], int shapesLen, float deltaTime) {
     }
 
     Vector2 oldPosition = ball->position;
-    ball->position.x += ball->velocity.x * deltaTime;
-    ball->position.y += ball->velocity.y * deltaTime;
+    ball->position = ApplyVelocity(oldPosition, ball->velocity, deltaTime);
 
     if (ball->position.x + ball->radius >= GetScreenWidth()) { // right wall
         ball->position.x = GetScreenWidth() - ball->radius;
@@ -172,10 +178,10 @@ void BallMove(Ball* ball, Shape* shapes[], int shapesLen, float deltaTime) {
     for (int i = 0; i < shapesLen; ++i) {
         switch (shapes[i]->type) {
         case RECTANGLE:
-            *ball = BallResolveCollisionRectangle(ball, oldPosition, shapes[i]->rectangle);
+            *ball = BallResolveCollisionRectangle(ball, oldPosition, shapes[i]->rectangle, deltaTime);
         break;
         case CIRCLE:
-            *ball = BallResolveCollisionCircle(ball, ball->radius, shapes[i]->circle);
+            *ball = BallResolveCollisionCircle(ball, oldPosition, ball->radius, shapes[i]->circle, deltaTime);
         break;
         default:
             __builtin_unreachable();

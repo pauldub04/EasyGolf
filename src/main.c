@@ -15,18 +15,18 @@ int main(void) {
     // so that fps does not change ball movement
 
     Ball ball = {
-        // .radius = 15,
-        .radius = 35,
+        .radius = 15,
+        // .radius = 35,
         .position = { GetScreenWidth()/2.0f, GetScreenHeight()/2.0f},
         .velocity = Vector2Zero(),
         .color = WHITE
     };
 
     Shape* shapes[] = {
-        ShapeCreateRectangle(200, 200, 100, 300),
-        ShapeCreateCircle(100, 100, 50)
+        // ShapeCreateRectangle(200, 200, 100, 300),
+        ShapeCreateCircle(300, 300, 50)
     };
-    int shapesLen = 2;
+    int shapesLen = 1;
 
 
     bool pause = 0;
